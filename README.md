@@ -1,4 +1,4 @@
-# PulmaoAlga
+# Chaetomorpha Reactor
 
 Projeto Arduino/ESP32 para controle de:
 - fita RGB (via PWM)
