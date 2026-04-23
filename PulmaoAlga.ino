@@ -1,3 +1,5 @@
+#include <WiFi.h>
+
 // =========================
 // PINOS
 // =========================
@@ -5,6 +7,13 @@ const int PINO_VERDE    = 4;
 const int PINO_VERMELHO = 21;
 const int PINO_AZUL     = 19;
 const int PINO_BOMBA    = 25;
+
+// =========================
+// WIFI
+// =========================
+const char* WIFI_SSID = "SEU_WIFI";
+const char* WIFI_SENHA = "SUA_SENHA";
+const unsigned long WIFI_TIMEOUT_MS = 15000;
 
 // =========================
 // CONFIG PWM
@@ -72,6 +81,34 @@ void desligarBomba() {
 }
 
 // =========================
+// WIFI
+// =========================
+bool conectarWiFi(const char* ssid, const char* senha, unsigned long timeoutMs) {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, senha);
+
+  Serial.print("Conectando ao WiFi");
+  unsigned long inicio = millis();
+
+  while (WiFi.status() != WL_CONNECTED && (millis() - inicio) < timeoutMs) {
+    Serial.print(".");
+    delay(500);
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println();
+    Serial.println("WiFi conectado com sucesso.");
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
+    return true;
+  }
+
+  Serial.println();
+  Serial.println("Falha ao conectar no WiFi.");
+  return false;
+}
+
+// =========================
 // SETUP
 // =========================
 void setup() {
@@ -90,6 +127,8 @@ void setup() {
       delay(1000);
     }
   }
+
+  conectarWiFi(WIFI_SSID, WIFI_SENHA, WIFI_TIMEOUT_MS);
 
   corVerde();
 
