@@ -2,13 +2,14 @@
 
 Projeto Arduino/ESP32 para controle de:
 - fita RGB (via PWM)
-- bomba (via rele)
+- bomba sempre ligada ao iniciar
 - conexao Wi-Fi
 
 ## Funcionalidades
 - Controle de cor da fita RGB por comando serial.
-- Liga/desliga da bomba por comando serial.
+- Bomba ligada automaticamente na inicializacao.
 - Inicializacao de rede Wi-Fi no `setup()` com timeout e exibicao de IP.
+- Reconexao automatica do Wi-Fi caso a conexao caia.
 
 ## Hardware esperado
 - ESP32
@@ -40,12 +41,10 @@ Abra o monitor serial em `115200 baud` e envie:
 - `verde`
 - `amarelo`
 - `vermelho`
-- `apagar`
-- `on` (liga bomba)
-- `off` (desliga bomba)
+- `piscar`
 
 ## Fluxo de inicializacao
-1. Configura pinos e PWM.
+1. Configura pinos, liga a bomba e inicializa PWM.
 2. Tenta conectar ao Wi-Fi.
 3. Define cor inicial verde.
-4. Aguarda comandos no serial.
+4. Mantem o Wi-Fi conectado e aguarda comandos no serial.
