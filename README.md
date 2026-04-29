@@ -17,9 +17,9 @@ Projeto Arduino/ESP32 para controle de:
 - Modulo rele para bomba
 
 ## Mapeamento de pinos
-- `PINO_VERDE`: 4
+- `PINO_VERDE`: 19
 - `PINO_VERMELHO`: 21
-- `PINO_AZUL`: 19
+- `PINO_AZUL`: 4
 - `PINO_BOMBA`: 25
 
 ## Configuracao Wi-Fi

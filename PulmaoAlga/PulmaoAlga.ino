@@ -3,9 +3,9 @@
 // =========================
 // PINOS
 // =========================
-const int PINO_VERDE    = 4;
+const int PINO_VERDE    = 19;
 const int PINO_VERMELHO = 21;
-const int PINO_AZUL     = 19;
+const int PINO_AZUL     = 4;
 const int PINO_BOMBA    = 25;
 
 // =========================
@@ -30,6 +30,7 @@ const int VEZES_PISCA_VERMELHO = 5;
 // CONFIGURAÇÃO DA FITA RGB
 // =========================
 const bool FITA_COMUM_ANODO = false;
+const int BOMBA_LIGADA = LOW;
 
 // =========================
 // FUNÇÕES AUXILIARES
@@ -125,7 +126,7 @@ void setup() {
   Serial.begin(115200);
 
   pinMode(PINO_BOMBA, OUTPUT);
-  digitalWrite(PINO_BOMBA, HIGH);
+  digitalWrite(PINO_BOMBA, BOMBA_LIGADA);
 
   bool okR = ledcAttach(PINO_VERMELHO, FREQUENCIA_PWM, RESOLUCAO_PWM);
   bool okG = ledcAttach(PINO_VERDE,    FREQUENCIA_PWM, RESOLUCAO_PWM);
