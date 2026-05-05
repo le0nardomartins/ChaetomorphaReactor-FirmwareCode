@@ -13,18 +13,18 @@ O codigo controla:
 ## Arquivos
 
 ```text
-PulmaoAlga.ino
-FutureFestTotemClient.h
-FutureFestTotemClient.cpp
+PulmaoAlga/PulmaoAlga.ino
+PulmaoAlga/FutureFestTotemClient.h
+PulmaoAlga/FutureFestTotemClient.cpp
 ```
 
-`PulmaoAlga.ino` fica com pinos, hardware, Wi-Fi e comandos seriais.
+`PulmaoAlga/PulmaoAlga.ino` fica com pinos, hardware, Wi-Fi e comandos seriais.
 
-`FutureFestTotemClient.h` e `FutureFestTotemClient.cpp` ficam com a comunicacao HTTP com o server.
+`PulmaoAlga/FutureFestTotemClient.h` e `PulmaoAlga/FutureFestTotemClient.cpp` ficam com a comunicacao HTTP com o server.
 
 ## Configuracao antes de gravar
 
-No arquivo `PulmaoAlga.ino`, ajuste Wi-Fi e identificador do hardware:
+No arquivo `PulmaoAlga/PulmaoAlga.ino`, ajuste Wi-Fi e identificador do hardware:
 
 ```cpp
 const char* WIFI_SSID = "SEU_WIFI";
