@@ -88,6 +88,8 @@ TotemStatus FutureFestTotemClient::status() {
   TotemStatus result = request("GET", "status", "");
   if (result.ok) {
     _connected = result.connected;
+  } else if (result.httpCode == 404) {
+    _connected = false;
   }
   return result;
 }

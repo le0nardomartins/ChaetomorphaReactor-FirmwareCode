@@ -13,8 +13,8 @@ const int PINO_BOMBA = 25;
 // =========================
 // WIFI
 // =========================
-const char* WIFI_SSID = "SEU_WIFI";
-const char* WIFI_SENHA = "SUA_SENHA";
+const char* WIFI_SSID = "FIAP-IOT";
+const char* WIFI_SENHA = "F!@p25.IOT";
 const unsigned long WIFI_TIMEOUT_MS = 15000;
 
 // =========================
@@ -22,13 +22,20 @@ const unsigned long WIFI_TIMEOUT_MS = 15000;
 // =========================
 const String FUTUREFEST_API_BASE_URL = "https://ffcvg-production-f333.up.railway.app/api";
 const String DEVICE_ID = "pulmao-alga-01";
+const String MANAGER_ID = "03";
 const unsigned long STATUS_INTERVAL_MS = 5000;
 const unsigned long HEARTBEAT_INTERVAL_MS = 15000;
+const unsigned long ALERTA_MORTE_INTERVALO_MS = 70;
+const unsigned long APAGADO_IDLE_INTERVALO_MS = 250;
 
 FutureFestTotemClient futureFest(FUTUREFEST_API_BASE_URL);
 unsigned long ultimoStatusMs = 0;
 unsigned long ultimoHeartbeatMs = 0;
+unsigned long ultimoAlertaMorteMs = 0;
+unsigned long ultimoApagadoIdleMs = 0;
 int ultimaVidaExibida = -99;
+bool alertaMorteAtivo = false;
+bool alertaMorteLigado = false;
 
 // =========================
 // CONFIG PWM
@@ -44,15 +51,30 @@ const bool RELE_ATIVO_EM_LOW = true;
 // =========================
 // CONFIGURACAO DA FITA RGB
 // =========================
-const bool FITA_COMUM_ANODO = false;
+const bool FITA_COMUM_ANODO = true;
+const bool CANAL_VERMELHO_ATIVO_EM_LOW = true;
+const bool CANAL_VERDE_ATIVO_EM_LOW = true;
+const bool CANAL_AZUL_ATIVO_EM_LOW = true;
 
 // =========================
 // FUNCOES AUXILIARES
 // =========================
+bool canalAtivoEmLow(int pino) {
+  if (pino == PINO_VERMELHO) return CANAL_VERMELHO_ATIVO_EM_LOW;
+  if (pino == PINO_VERDE) return CANAL_VERDE_ATIVO_EM_LOW;
+  if (pino == PINO_AZUL) return CANAL_AZUL_ATIVO_EM_LOW;
+  if (FITA_COMUM_ANODO) return true;
+  return false;
+}
+
+int valorDesligadoDoCanal(int pino) {
+  return canalAtivoEmLow(pino) ? HIGH : LOW;
+}
+
 void escreverPWM(int pino, int valor) {
   valor = constrain(valor, 0, 255);
 
-  if (FITA_COMUM_ANODO) {
+  if (canalAtivoEmLow(pino)) {
     valor = 255 - valor;
   }
 
@@ -80,6 +102,10 @@ void corVermelha() {
   setCorRGB(255, 0, 0);
 }
 
+void corVermelhaIntensa() {
+  setCorRGB(255, 0, 0);
+}
+
 void corAzul() {
   setCorRGB(0, 70, 255);
 }
@@ -90,6 +116,13 @@ void corRoxa() {
 
 void apagarFita() {
   setCorRGB(0, 0, 0);
+}
+
+void forcarFitaApagada() {
+  apagarFita();
+  digitalWrite(PINO_VERMELHO, valorDesligadoDoCanal(PINO_VERMELHO));
+  digitalWrite(PINO_VERDE, valorDesligadoDoCanal(PINO_VERDE));
+  digitalWrite(PINO_AZUL, valorDesligadoDoCanal(PINO_AZUL));
 }
 
 void piscarCor(void (*cor)(), int vezes, int intervaloMs) {
@@ -117,27 +150,35 @@ void desligarBomba() {
 // =========================
 bool conectarWiFi(const char* ssid, const char* senha, unsigned long timeoutMs) {
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, senha);
 
-  Serial.print("Conectando ao WiFi");
-  unsigned long inicio = millis();
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print("Conectando ao WiFi");
+    WiFi.disconnect(true);
+    delay(200);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, senha);
 
-  while (WiFi.status() != WL_CONNECTED && (millis() - inicio) < timeoutMs) {
-    Serial.print(".");
-    delay(500);
-  }
+    unsigned long inicio = millis();
+    while (WiFi.status() != WL_CONNECTED && (millis() - inicio) < timeoutMs) {
+      Serial.print(".");
+      forcarFitaApagada();
+      delay(500);
+    }
 
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println();
-    Serial.println("WiFi conectado com sucesso.");
-    Serial.print("IP: ");
-    Serial.println(WiFi.localIP());
-    return true;
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println();
+      Serial.println("WiFi ainda indisponivel. Nova tentativa em 2 segundos.");
+      forcarFitaApagada();
+      delay(2000);
+    }
   }
 
   Serial.println();
-  Serial.println("Falha ao conectar no WiFi.");
-  return false;
+  Serial.println("WiFi conectado com sucesso.");
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
+  forcarFitaApagada();
+  return true;
 }
 
 // =========================
@@ -176,25 +217,36 @@ void imprimirStatusTotem(const TotemStatus& status) {
 
 void aplicarVidaNoHardware(const TotemStatus& status) {
   if (!status.ok || status.lives < 0) {
-    corAzul();
-    desligarBomba();
+    alertaMorteAtivo = false;
+    alertaMorteLigado = false;
+    if (status.ok && status.connected) {
+      ligarBomba();
+      corVerde();
+    } else {
+      forcarFitaApagada();
+      desligarBomba();
+    }
     return;
   }
 
   if (status.gameOver || status.lives <= 0) {
+    alertaMorteAtivo = true;
+    ultimoAlertaMorteMs = 0;
     ligarBomba();
-    if (ultimaVidaExibida != status.lives) {
-      piscarCor(corVermelha, 4, 120);
-    }
-    corVermelha();
   } else if (status.lives == 1) {
+    alertaMorteAtivo = false;
+    alertaMorteLigado = false;
     ligarBomba();
     corVermelha();
   } else if (status.lives == 2) {
-    desligarBomba();
+    alertaMorteAtivo = false;
+    alertaMorteLigado = false;
+    ligarBomba();
     corAmarela();
   } else {
-    desligarBomba();
+    alertaMorteAtivo = false;
+    alertaMorteLigado = false;
+    ligarBomba();
     corVerde();
   }
 
@@ -205,9 +257,39 @@ void aplicarVidaNoHardware(const TotemStatus& status) {
   ultimaVidaExibida = status.lives;
 }
 
+void tickAlertaMorte() {
+  if (!alertaMorteAtivo) return;
+
+  unsigned long agora = millis();
+  if (ultimoAlertaMorteMs != 0 && agora - ultimoAlertaMorteMs < ALERTA_MORTE_INTERVALO_MS) {
+    return;
+  }
+
+  ultimoAlertaMorteMs = agora;
+  alertaMorteLigado = !alertaMorteLigado;
+
+  if (alertaMorteLigado) {
+    corVermelhaIntensa();
+  } else {
+    forcarFitaApagada();
+  }
+}
+
+void manterFitaApagadaQuandoDesconectado() {
+  if (futureFest.isConnected() || alertaMorteAtivo) return;
+
+  unsigned long agora = millis();
+  if (ultimoApagadoIdleMs != 0 && agora - ultimoApagadoIdleMs < APAGADO_IDLE_INTERVALO_MS) {
+    return;
+  }
+
+  ultimoApagadoIdleMs = agora;
+  forcarFitaApagada();
+}
+
 bool garantirConfiguracaoTotem() {
   if (!futureFest.hasManager()) {
-    Serial.println("Defina o gestor primeiro. Exemplo: id flora");
+    Serial.println("Gestor fixo invalido no firmware. Ajuste MANAGER_ID para 01, 02, 03 ou 04.");
     return false;
   }
 
@@ -219,17 +301,51 @@ bool garantirConfiguracaoTotem() {
   return true;
 }
 
+void solicitarSessaoNoTerminal() {
+  Serial.print("Totem fixo do gestor ");
+  Serial.print(futureFest.managerId());
+  Serial.print(" ");
+  Serial.println(futureFest.managerLabel());
+  Serial.println("Informe o codigo da sessao para conectar. Exemplo: connect A7K2");
+}
+
+void encerrarSessaoLocalInexistente() {
+  Serial.println("Sessao nao encontrada no servidor. O lobby pode ter sido encerrado ou resetado.");
+  alertaMorteAtivo = false;
+  alertaMorteLigado = false;
+  desligarBomba();
+  piscarCor(corVermelha, 3, 120);
+  forcarFitaApagada();
+  futureFest.clearSession();
+  ultimaVidaExibida = -99;
+  solicitarSessaoNoTerminal();
+}
+
 void conectarTotem() {
   if (!garantirConfiguracaoTotem()) return;
 
   Serial.println("Conectando totem ao servidor...");
   TotemStatus status = futureFest.connect();
   imprimirStatusTotem(status);
-  aplicarVidaNoHardware(status);
 
   if (status.ok) {
+    alertaMorteAtivo = false;
+    alertaMorteLigado = false;
+    ligarBomba();
     ultimoHeartbeatMs = millis();
     ultimoStatusMs = millis();
+    ultimaVidaExibida = status.lives;
+    if (status.gameOver || status.lives == 0) {
+      aplicarVidaNoHardware(status);
+    } else {
+      piscarCor(corAzul, 3, 120);
+      corVerde();
+    }
+  } else {
+    aplicarVidaNoHardware(status);
+    if (status.httpCode == 404) {
+      encerrarSessaoLocalInexistente();
+    }
   }
 }
 
@@ -242,7 +358,12 @@ void desconectarTotem() {
   Serial.println("Desconectando totem...");
   TotemStatus status = futureFest.disconnect();
   imprimirStatusTotem(status);
-  corRoxa();
+  alertaMorteAtivo = false;
+  alertaMorteLigado = false;
+  desligarBomba();
+  piscarCor(corVermelha, 3, 120);
+  forcarFitaApagada();
+  solicitarSessaoNoTerminal();
 }
 
 void executarDebugHardware(const String& comando) {
@@ -277,6 +398,10 @@ void consultarStatusTotem() {
 
   TotemStatus status = futureFest.status();
   imprimirStatusTotem(status);
+  if (status.httpCode == 404) {
+    encerrarSessaoLocalInexistente();
+    return;
+  }
   aplicarVidaNoHardware(status);
   ultimoStatusMs = millis();
 }
@@ -296,6 +421,10 @@ void tickFutureFest() {
     if (!status.ok) {
       Serial.println("Falha no heartbeat do totem.");
       imprimirStatusTotem(status);
+      if (status.httpCode == 404) {
+        encerrarSessaoLocalInexistente();
+        return;
+      }
     }
     ultimoHeartbeatMs = agora;
   }
@@ -304,10 +433,7 @@ void tickFutureFest() {
 void imprimirAjuda() {
   Serial.println();
   Serial.println("Comandos FutureFest:");
-  Serial.println("id 01 | id pessoas  -> gestor Pessoas/Social");
-  Serial.println("id 02 | id clima    -> gestor Climaticos");
-  Serial.println("id 03 | id flora    -> gestor Plantas/Flora");
-  Serial.println("id 04 | id fauna    -> gestor Animais/Fauna");
+  Serial.println("O gestor deste totem e fixo no firmware pela constante MANAGER_ID.");
   Serial.println("sess A7K2           -> salva o codigo da sessao");
   Serial.println("connect A7K2        -> define a sessao e conecta");
   Serial.println("connect             -> conecta usando a sessao salva");
@@ -353,15 +479,11 @@ void processarComando(String comando) {
   lower.toLowerCase();
 
   if (lower.startsWith("id ")) {
-    String valor = argumentoDepoisDoEspaco(comando);
-    if (futureFest.setManagerId(valor)) {
-      Serial.print("Gestor definido: ");
-      Serial.print(futureFest.managerId());
-      Serial.print(" ");
-      Serial.println(futureFest.managerLabel());
-    } else {
-      Serial.println("Gestor invalido. Use 01, 02, 03, 04, pessoas, clima, flora ou fauna.");
-    }
+    Serial.println("O gestor deste totem e fixo no firmware. Altere MANAGER_ID e grave novamente para trocar.");
+    Serial.print("Gestor atual: ");
+    Serial.print(futureFest.managerId());
+    Serial.print(" ");
+    Serial.println(futureFest.managerLabel());
   } else if (lower.startsWith("sess ")) {
     String valor = argumentoDepoisDoEspaco(comando);
     if (futureFest.setSessionId(valor)) {
@@ -383,10 +505,6 @@ void processarComando(String comando) {
     ultimaVidaExibida = -99;
   } else if (lower.startsWith("trocar ")) {
     String valor = argumentoDepoisDoEspaco(comando);
-    if (!futureFest.hasManager()) {
-      Serial.println("Defina o gestor antes de trocar de sessao. Exemplo: id flora");
-      return;
-    }
     if (futureFest.hasSession()) {
       desconectarTotem();
     }
@@ -414,7 +532,13 @@ void processarComando(String comando) {
 // =========================
 void setup() {
   Serial.begin(115200);
-  delay(600);
+
+  pinMode(PINO_VERMELHO, OUTPUT);
+  pinMode(PINO_VERDE, OUTPUT);
+  pinMode(PINO_AZUL, OUTPUT);
+  digitalWrite(PINO_VERMELHO, valorDesligadoDoCanal(PINO_VERMELHO));
+  digitalWrite(PINO_VERDE, valorDesligadoDoCanal(PINO_VERDE));
+  digitalWrite(PINO_AZUL, valorDesligadoDoCanal(PINO_AZUL));
 
   pinMode(PINO_BOMBA, OUTPUT);
   desligarBomba();
@@ -430,13 +554,25 @@ void setup() {
     }
   }
 
+  forcarFitaApagada();
   futureFest.setDeviceId(DEVICE_ID);
-  corAzul();
+  if (!futureFest.setManagerId(MANAGER_ID)) {
+    Serial.println("MANAGER_ID invalido. Use 01, 02, 03 ou 04.");
+    while (true) {
+      forcarFitaApagada();
+      delay(1000);
+    }
+  }
+  forcarFitaApagada();
+  delay(600);
+  forcarFitaApagada();
   conectarWiFi(WIFI_SSID, WIFI_SENHA, WIFI_TIMEOUT_MS);
+  forcarFitaApagada();
 
   Serial.println("Sistema iniciado.");
   imprimirAjuda();
   imprimirInfo();
+  solicitarSessaoNoTerminal();
 }
 
 // =========================
@@ -449,4 +585,6 @@ void loop() {
   }
 
   tickFutureFest();
+  tickAlertaMorte();
+  manterFitaApagadaQuandoDesconectado();
 }
