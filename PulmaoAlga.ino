@@ -22,7 +22,7 @@ const unsigned long WIFI_TIMEOUT_MS = 15000;
 // =========================
 const String FUTUREFEST_API_BASE_URL = "https://ffcvg-production-f333.up.railway.app/api";
 const String DEVICE_ID = "pulmao-alga-01";
-const String MANAGER_ID = "03";
+const String MANAGER_ID = "02";
 const unsigned long STATUS_INTERVAL_MS = 5000;
 const unsigned long HEARTBEAT_INTERVAL_MS = 15000;
 const unsigned long ALERTA_MORTE_INTERVALO_MS = 70;

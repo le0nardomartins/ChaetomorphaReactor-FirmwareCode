@@ -41,10 +41,10 @@ String FutureFestTotemClient::managerId() const {
 }
 
 String FutureFestTotemClient::managerLabel() const {
-  if (_managerId == "01") return "Pessoas";
-  if (_managerId == "02") return "Climaticos";
-  if (_managerId == "03") return "Plantas";
-  if (_managerId == "04") return "Animais";
+  if (_managerId == "01") return "Industria";
+  if (_managerId == "02") return "Ambiental";
+  if (_managerId == "03") return "Climatico";
+  if (_managerId == "04") return "Social";
   return "Nao definido";
 }
 
@@ -99,10 +99,10 @@ String FutureFestTotemClient::normalizeManagerId(const String& value) const {
   text.trim();
   text.toLowerCase();
 
-  if (text == "1" || text == "01" || text == "pessoa" || text == "pessoas" || text == "social") return "01";
-  if (text == "2" || text == "02" || text == "clima" || text == "climatico" || text == "climaticos" || text == "climatica") return "02";
-  if (text == "3" || text == "03" || text == "planta" || text == "plantas" || text == "flora") return "03";
-  if (text == "4" || text == "04" || text == "animal" || text == "animais" || text == "fauna") return "04";
+  if (text == "1" || text == "01" || text == "industria" || text == "industrial") return "01";
+  if (text == "2" || text == "02" || text == "ambiental" || text == "ambiente" || text == "fauna" || text == "flora") return "02";
+  if (text == "3" || text == "03" || text == "clima" || text == "climatico" || text == "climaticos" || text == "climatica") return "03";
+  if (text == "4" || text == "04" || text == "pessoa" || text == "pessoas" || text == "social") return "04";
 
   return "";
 }

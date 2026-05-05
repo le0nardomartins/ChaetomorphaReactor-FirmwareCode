@@ -1,4 +1,4 @@
-# PulmaoAlga Totem Firmware
+# Chaetomorpha Reactor - Firmware
 
 Firmware Arduino/ESP32 para o totem fisico de gestor do FutureFest.
 
@@ -24,7 +24,7 @@ No arquivo `PulmaoAlga.ino`, ajuste o Wi-Fi, o identificador fisico do hardware 
 const char* WIFI_SSID = "SEU_WIFI";
 const char* WIFI_SENHA = "SUA_SENHA";
 const String DEVICE_ID = "pulmao-alga-01";
-const String MANAGER_ID = "03";
+const String MANAGER_ID = "02";
 ```
 
 `DEVICE_ID` identifica o hardware fisico. Use nomes como `totem-social-01`, `totem-clima-01`, `totem-flora-01` ou `totem-fauna-01`.
@@ -33,10 +33,10 @@ const String MANAGER_ID = "03";
 
 | MANAGER_ID | Gestor fisico | Area do jogo |
 | --- | --- | --- |
-| `01` | Pessoas | Social |
-| `02` | Climaticos | Climatica |
-| `03` | Plantas | Flora Silvestre |
-| `04` | Animais | Fauna Silvestre |
+| `01` | Industria | Industria |
+| `02` | Ambiental | Fauna e flora juntas |
+| `03` | Climatico | Clima |
+| `04` | Social | Sociedade |
 
 O servidor padrao aponta para producao:
 
@@ -165,12 +165,12 @@ GET  /api/totems/{managerId}/{sessionId}/status
 POST /api/totems/{managerId}/{sessionId}/disconnect
 ```
 
-Exemplo para o totem de Plantas na sessao `A7K2`:
+Exemplo para o totem Ambiental na sessao `A7K2`:
 
 ```text
-POST https://ffcvg-production-f333.up.railway.app/api/totems/03/A7K2/connect
-GET  https://ffcvg-production-f333.up.railway.app/api/totems/03/A7K2/status
-POST https://ffcvg-production-f333.up.railway.app/api/totems/03/A7K2/disconnect
+POST https://ffcvg-production-f333.up.railway.app/api/totems/02/A7K2/connect
+GET  https://ffcvg-production-f333.up.railway.app/api/totems/02/A7K2/status
+POST https://ffcvg-production-f333.up.railway.app/api/totems/02/A7K2/disconnect
 ```
 
 Payload enviado no `connect`:
@@ -186,9 +186,9 @@ Resposta esperada:
 ```json
 {
   "session_id": "A7K2",
-  "manager_id": "03",
-  "manager_label": "Plantas",
-  "area_label": "Flora Silvestre",
+  "manager_id": "02",
+  "manager_label": "Ambiental",
+  "area_label": "Ambiental",
   "connected": true,
   "device_id": "pulmao-alga-01",
   "session_status": "waiting",
