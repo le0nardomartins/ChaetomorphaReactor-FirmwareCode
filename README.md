@@ -1,4 +1,4 @@
-# PulmaoAlga
+# Chaetomorpha Reactor
 
 Firmware Arduino/ESP32 para o totem fisico do FutureFest.
 
